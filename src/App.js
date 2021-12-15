@@ -6,14 +6,18 @@ import { TextComp } from './components/TextLabel.js';
 import { CreateInput } from './components/Input.js';
 import { BasicModal } from './components/Modal.js';
 import { PlayerScore } from './components/Player.js';
-
+import { Icon } from './components/Icon.js';
+import ThemeContextProvider from './components/Theme';
+import DarkModeToggle from './components/DarkModeButton';
 
 function App() {
+  const [life, setLife] = React.useState(1);
+  const [end, setEnd] = React.useState(false);
+  const [started, setIsStarted] = React.useState(false);
   const [wordId, setWordId] = React.useState("");
   const [word, setWord] = React.useState("");
   const [gessedWord, setGessedWord] = React.useState("");
   const [input, setInput] = React.useState("");
-  const [started,setIsStarted] = React.useState(false);
   const [user,setAllUsers] = React.useState([]);
   const [currentUser, setCurrentUser] = React.useState("");
   const [oppenModal, setOppendModal] = React.useState(false);
@@ -56,9 +60,11 @@ function App() {
     fetch(`https://animalfinderapi.herokuapp.com/score`)
     .then(function(response){ return response.json(); })
     .then(function(result) {
+      setAllUsers([])
       result.data.forEach(element => {
-        user.push(element);
+        setAllUsers(oldArray => [...oldArray, element]);
       });
+      console.log(user);
       setIsStarted(true);
     })
 
@@ -91,7 +97,6 @@ function App() {
 
   
   function getGessedWord(str){
-    console.log(str.length);
     console.log(str);
     let response = "";
     for(let i = 0; i < str.length; i++){
@@ -104,17 +109,40 @@ function App() {
     if(index > str.length-1) return str;
     return str.substring(0,index) + chr + str.substring(index+1);
   }
+
+  function retry(){
+    setLife(1);
+    setEnd(false)
+    getRandomWord();
+  }
+
+  function formatResponse(arr){
+    let response = "";
+    for(let i = 0; i < arr.length; i++){
+      response += ` ${arr[i]} `
+    }
+    return response;
+  }
   
   function compareWords(str){
     let tmp = gessedWord;
+    let found = false;
     for(let i = 0; i < word.length; i++){
       if(str.toUpperCase() == word[i].toUpperCase()){
         tmp = setCharAt(tmp,i,word[i]);
+        found = true;
+      }
+    }
+    if(!found){
+      setLife(life + 1);
+      if(life+1 == 8){
+        setEnd(true);
+        saveGame(false);
       }
     }
     if(tmp == word){
+      setEnd(true);
       saveGame(true);
-      console.log("win ! ")
     }
     setGessedWord(tmp);
   }
@@ -132,16 +160,29 @@ function App() {
   function gameBoard(){
     return(
       <div className="gameBoard">
-        <div className="App">
-          <TextComp text={gessedWord}/>
-          {BUTTONS.map((btn) => {
-            return <CreateButton text={btn} key={btn} onClick={function(){compareWords(btn)}}/>
-          })}
+        <div className="App" key="game">
+          <h2>Logged as user : {currentUser}</h2>
+          <Icon url={`./images/${life}.png`}/>
+          {
+            end ? 
+              <div>
+                {life == 8 ? <p>Game OVER ! </p>: <p>You win !</p>}
+                <h2>The word was : {word}</h2>
+                <CreateButton text="Retry" onClick={retry}/>
+              </div>
+            :
+            <div>
+            <TextComp text={formatResponse(gessedWord.split(''))}/>
+              {BUTTONS.map((btn) => {
+                return <CreateButton text={btn} key={btn} onClick={function(){compareWords(btn)}}/>
+              })}
+            </div>
+          }
         </div>
-        <div className="App">
+        <div className="App" key="leaderBoard">
           <h2>Leader board</h2>
           {user.map((el, index) => {
-            return <PlayerScore src={el.avatar} name={el.username} score={el.score}/>
+            return <PlayerScore src={el.avatar} key={el.username} name={el.username} score={el.score}/>
           })}
         </div>
       </div>
@@ -149,9 +190,13 @@ function App() {
   }
   return (
     <div >
-    {started ? gameBoard() : loginForm()}
+    <ThemeContextProvider>
+      <DarkModeToggle />
+
+      {started ? gameBoard() : loginForm()}
+    </ThemeContextProvider>
     </div>
   );
-}
+} 
 
 export default App;
