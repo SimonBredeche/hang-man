@@ -161,7 +161,7 @@ function Content() {
     return(
       <div className="gameBoard">
         <div className="App" key="game">
-          <h2>Logged as user : {currentUser}</h2>
+          <h2 className="h2">Logged as user : {currentUser}</h2>
           <Icon url={`./images/${life}.png`}/>
           {
             end ? 
